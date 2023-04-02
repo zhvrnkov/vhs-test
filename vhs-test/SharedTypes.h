@@ -20,8 +20,8 @@ typedef struct {
 
 GlitchParameters DefaultGlitchParameters() {
     GlitchParameters output;
-    output.frequency = 0.005;
-    output.grid.x = 10.0;
+    output.frequency = 0.0025;
+    output.grid.x = 20.0;
     output.grid.y = 10.0;
     output.artifactThickness = 0.02;
     output.artifactSmoothness = 10.0;
@@ -54,8 +54,8 @@ typedef struct {
 ColorCorrectionParameters DefaultColorCorrectionParameters() {
     ColorCorrectionParameters output;
     output.brightness = -0.1;
-    output.contrast = 1.25;
-    output.saturation = 0.65;
+    output.contrast = 1.15;
+    output.saturation = 0.75;
     return output;
 }
 
@@ -78,7 +78,8 @@ typedef struct {
     VerticalScanLineParameters scanLineParameters;
     ColorCorrectionParameters colorCorrectionParameters;
     VerticalDistortionParameters verticalDistortionParameters;
-    float randomUVDistortionStrength;
+    float randomUVDistortionStrengthLB;
+    float randomUVDistortionStrengthUB;
     float grainStrength;
     float colorsPerChannel;
     float blurSigma;
@@ -90,10 +91,11 @@ VHSParameters DefaultVHSParameters() {
     output.scanLineParameters = DefaultVerticalScanLineParameters();
     output.colorCorrectionParameters = DefaultColorCorrectionParameters();
     output.verticalDistortionParameters = DefaultVerticalDistortionParameters();
-    output.randomUVDistortionStrength = 0.0015;
+    output.randomUVDistortionStrengthLB = 0.001;
+    output.randomUVDistortionStrengthUB = 0.002;
     output.grainStrength = 0.1;
     output.colorsPerChannel = 32.0;
-    output.blurSigma = 1.25;
+    output.blurSigma = 1.1;
     return output;
 }
 

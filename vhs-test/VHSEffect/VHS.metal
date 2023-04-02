@@ -44,8 +44,9 @@ half4 glitch(float2 uv, float time, GlitchParameters params)
     const auto horizontal = 1.0 - (step(fractional.x, artifactVerticalAxis-vertical) +
                                    step(artifactVerticalAxis+vertical, fractional.x));
 
-    const float noise = float(rand(integer + time) > (1.0 - params.frequency));
-    return half4(horizontal * noise);
+    const float noise = rand(integer + time);
+    const bool isNoiseInRange = noise > (0.5 - params.frequency) && noise < 0.5;
+    return half4(horizontal * isNoiseInRange);
 }
 
 half makeVerticalScanLine(float2 uv, float time, VerticalScanLineParameters params)
@@ -83,10 +84,9 @@ half4x4 makeContrastMatrix(half contrast)
     return output;
 }
 
+constant constexpr half3 luminance = half3(0.3086, 0.6094, 0.0820);
 half4x4 makeSaturationMatrix(half saturation)
 {
-    constexpr half3 luminance = half3(0.3086, 0.6094, 0.0820);
-
     float oneMinusSat = 1.0 - saturation;
     
     half4x4 output = half4x4(1.0);
@@ -116,7 +116,11 @@ kernel void vhs(texture2d<half, access::sample> sourceTexture [[ texture(0) ]],
     const float2 uv = float2(gridPosition) / sourceSize;
     const half noise = rand(uv + time);
 
-    float2 distortedUV = distort(uv, noise, params.randomUVDistortionStrength);
+    half3 luma = dot(sourceTexture.read(gridPosition).rgb, luminance);
+    const half hardLightColor = smoothstep(0.05h, 0.95h, luma.b);
+
+    const float distortStrength = mix(params.randomUVDistortionStrengthLB, params.randomUVDistortionStrengthUB, float(hardLightColor));
+    float2 distortedUV = distort(uv, noise, distortStrength);
     const float verticalScanline = makeVerticalScanLine(distortedUV, time, params.scanLineParameters);
     const float verticalDistortion = makeVerticalDistortion(uv, time, params.verticalDistortionParameters);
     distortedUV.y += verticalScanline;
