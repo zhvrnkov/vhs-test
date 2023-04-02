@@ -124,7 +124,7 @@ final class VideoCompositor: NSObject, AVVideoCompositing {
         textFrameRenderer.rect.size = CGSize(width: renderTargetSize.width, height: 82)
         textFrameRenderer.rect.center = CGPoint(
             x: textFrameRenderer.rect.height / 2.0 + 32,
-            y: textFrameRenderer.rect.width / 2.0 + 32
+            y: textFrameRenderer.rect.width / 2.0 + 48
         )
     }
     
