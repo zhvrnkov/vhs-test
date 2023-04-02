@@ -68,15 +68,12 @@ final class ViewController: UIViewController {
     private func makeComposition() -> AVComposition {
         let videoURL = Bundle.main.url(forResource: "original", withExtension: "MOV")!
         let asset = AVURLAsset(url: videoURL)
-        let sourceVideoTrack = asset.tracks(withMediaType: .video).first
+        let sourceVideoTrack = asset.tracks(withMediaType: .video).first!
         let sourceAudioTrack = asset.tracks(withMediaType: .audio).first
 
         let composition = AVMutableComposition()
         
-        guard let sourceVideoTrack,
-              let videoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: .video) else {
-            fatalError()
-        }
+        let videoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: .video)!
         
         try! videoTrack.insertTimeRange(sourceVideoTrack.timeRange, of: sourceVideoTrack, at: .invalid)
         videoTrack.preferredTransform = sourceVideoTrack.preferredTransform
@@ -112,11 +109,11 @@ final class ViewController: UIViewController {
         let composition = makeComposition()
         let videoComposition = makeVideoComposition(for: composition)
         
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("video.mov")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("video.mp4")
         try? FileManager.default.removeItem(at: url)
         let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality)!
         exportSession.videoComposition = videoComposition
-        exportSession.outputFileType = .mov
+        exportSession.outputFileType = .mp4
         exportSession.outputURL = url
         
         exportSession.exportAsynchronously { [weak self] in
