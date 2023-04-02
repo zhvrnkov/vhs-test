@@ -8,6 +8,7 @@
 #include <metal_stdlib>
 
 #include "../Common/Common.metal"
+#include "../SharedTypes.h"
 
 using namespace metal;
 
@@ -15,9 +16,7 @@ template<typename T>
 T quantitize(T rgb, float colorsPerChannel)
 {
     T output = rgb;
-    output.rgb *= (colorsPerChannel - 1.0);
-    output.rgb = round(output.rgb);
-    output.rgb /= (colorsPerChannel - 1.0);
+    output.rgb = discreted(output.rgb, colorsPerChannel - 1.0);
     return output;
 }
 
@@ -33,44 +32,41 @@ V distort(V coord, T noise, float strength)
     return coord + noise * strength;
 }
 
-half4 glitch(float2 uv, float time)
+half4 glitch(float2 uv, float time, GlitchParameters params)
 {
-    constexpr float glitchFrequency = 0.005;
-    constexpr float2 glitchGrid = float2(10.0);
-    constexpr float artifactThickness = 0.02;
-    constexpr float artifactSmoothness = 10.0;
-    constexpr float artifactVerticalAxis = 0.5;
-
-    uv = uv * glitchGrid;
+    uv = uv * params.grid;
     const auto integer = floor(uv);
     const auto fractional = fract(uv);
     
-    const auto vertical = artifactThickness * round(artifactSmoothness * (1.0 - fractional.y)) / artifactSmoothness;
+    const auto vertical = params.artifactThickness * discreted((1.0 - fractional.y), params.artifactSmoothness);
+    
+    const auto artifactVerticalAxis = params.artifactVerticalAxis;
     const auto horizontal = 1.0 - (step(fractional.x, artifactVerticalAxis-vertical) +
                                    step(artifactVerticalAxis+vertical, fractional.x));
 
-    const float noise = float(rand(integer + time) > (1.0 - glitchFrequency));
+    const float noise = float(rand(integer + time) > (1.0 - params.frequency));
     return half4(horizontal * noise);
 }
 
-half makeVerticalScanLine(float2 uv, float time, float frequency, float thickness)
+half makeVerticalScanLine(float2 uv, float time, VerticalScanLineParameters params)
 {
     constexpr float scanLinePosition = 0.5;
 
-    const float base = scanLinePosition * frequency;
-    const float delta = thickness;
+    const float base = scanLinePosition * params.frequency;
+    const float delta = params.thickness;
     
-    const float cycledX = fmod(uv.x + time, frequency);
-    return smoothstep(base - delta, base, cycledX) - smoothstep(base, base + delta, cycledX);
+    const float cycledX = fmod(uv.x + time * params.speed, params.frequency);
+    const float scanLine = smoothstep(base - delta, base, cycledX) -
+                           smoothstep(base, base + delta, cycledX);
+    
+    return scanLine * params.strength;
 }
 
-half makeVerticalDistortion(float2 uv, float time)
+half makeVerticalDistortion(float2 uv, float time, VerticalDistortionParameters params)
 {
-    constexpr float numberOfHorizontalSegments = 25.0;
-    constexpr float verticalDistortionFrequency = 0.03;
-    
-    const float x = floor(uv.x * numberOfHorizontalSegments);
-    return rand(float2(x, 1.0) + time) > 1.0 - verticalDistortionFrequency;
+    const float x = floor(uv.x * params.numberOfHorizontalSegments);
+    const float distortion = rand(float2(x, 1.0) + time) > 1.0 - params.frequency;
+    return distortion * params.strength;
 }
 
 half4x4 makeBrightnessMatrix(half brightness) {
@@ -101,51 +97,39 @@ half4x4 makeSaturationMatrix(half saturation)
     return output;
 }
 
-half4x4 makeBCSMatrix(half brightness, half contrast, half saturation)
+half4x4 makeColorCorrectionMatrix(ColorCorrectionParameters params)
 {
-    return makeBrightnessMatrix(brightness) * makeContrastMatrix(contrast) * makeSaturationMatrix(saturation);
+    return makeBrightnessMatrix(params.brightness) *
+           makeContrastMatrix(params.contrast) *
+           makeSaturationMatrix(params.saturation);
 }
 
 kernel void vhs(texture2d<half, access::sample> sourceTexture [[ texture(0) ]],
                 texture2d<half, access::write> destinationTexture [[ texture(1) ]],
                 constant float& time [[ buffer(0) ]],
+                constant VHSParameters& params [[ buffer(1) ]],
                 uint2 gridPosition [[ thread_position_in_grid ]])
 {
     constexpr sampler s;
-    constexpr float distortionStrength = 0.0015;
-
-    constexpr float vsSpeed = 0.25;
-    constexpr float vsFreq = 2.0;
-    constexpr float vsThickness = 0.01;
-    constexpr float vsStrength = 0.00125;
-    
-    constexpr float verticalGlitchStrength = 0.0015;
-
-    constexpr float colorsPerChannel = 32.0;
-    
-    constexpr float grainStrength = 0.1;
-    
-    constexpr float brightness = -0.15;
-    constexpr float contrast = 1.35;
-    constexpr float saturation = 0.65;
     
     const float2 sourceSize = float2(sourceTexture.get_width(), sourceTexture.get_height());
     const float2 uv = float2(gridPosition) / sourceSize;
     const half noise = rand(uv + time);
 
-    float2 distortedUV = distort(uv, noise, distortionStrength);
-    const float verticalScanline = makeVerticalScanLine(distortedUV, time * vsSpeed, vsFreq, vsThickness);
-    const float verticalDistortion = makeVerticalDistortion(uv, time);
-    distortedUV.y += verticalScanline * vsStrength;
-    distortedUV.y += verticalDistortion * verticalGlitchStrength;
+    float2 distortedUV = distort(uv, noise, params.randomUVDistortionStrength);
+    const float verticalScanline = makeVerticalScanLine(distortedUV, time, params.scanLineParameters);
+    const float verticalDistortion = makeVerticalDistortion(uv, time, params.verticalDistortionParameters);
+    distortedUV.y += verticalScanline;
+    distortedUV.y += verticalDistortion;
+
+    const half4 artifacts = glitch(distortedUV, time, params.glitchParameters);
     
     const half4 sourceTexel = sourceTexture.sample(s, distortedUV);
-    const half4 artifacts = glitch(distortedUV, time);
     const half4 withArtifacts = mix(sourceTexel, artifacts, artifacts.a);
-    const half4 bitDepthReduced = quantitize(withArtifacts, colorsPerChannel);
-    const half4 grained = grain(bitDepthReduced, noise, grainStrength);
+    const half4 bitDepthReduced = quantitize(withArtifacts, params.colorsPerChannel);
+    const half4 grained = grain(bitDepthReduced, noise, params.grainStrength);
     
-    const auto bcsMatrix = makeBCSMatrix(brightness, contrast, saturation);
+    const auto colorCorrectionMatrix = makeColorCorrectionMatrix(params.colorCorrectionParameters);
     
-    destinationTexture.write(bcsMatrix * grained, gridPosition);
+    destinationTexture.write(colorCorrectionMatrix * grained, gridPosition);
 }

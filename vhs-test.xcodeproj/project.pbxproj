@@ -43,7 +43,8 @@
 		3612D50B29D9590C00646FFC /* VCR_OSD_MONO_1.001.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = VCR_OSD_MONO_1.001.ttf; sourceTree = "<group>"; };
 		3612D50E29D966E500646FFC /* VHSEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VHSEffect.swift; sourceTree = "<group>"; };
 		3612D51029D96CB900646FFC /* VHS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = VHS.metal; sourceTree = "<group>"; };
-		3612D51229D9F09900646FFC /* SharedTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedTypes.h; sourceTree = "<group>"; };
+		3612D51229D9F09900646FFC /* vhs-test-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "vhs-test-Bridging-Header.h"; sourceTree = "<group>"; };
+		3612D51629D9F16500646FFC /* SharedTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedTypes.h; sourceTree = "<group>"; };
 		36F43D9929D946A100782344 /* vhs-test.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "vhs-test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		36F43D9C29D946A100782344 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		36F43DA529D946A200782344 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -132,7 +133,8 @@
 				3612D4F029D9474C00646FFC /* original.MOV */,
 				3612D4F529D947E600646FFC /* VideoCompositor.swift */,
 				3612D50B29D9590C00646FFC /* VCR_OSD_MONO_1.001.ttf */,
-				3612D51229D9F09900646FFC /* SharedTypes.h */,
+				3612D51229D9F09900646FFC /* vhs-test-Bridging-Header.h */,
+				3612D51629D9F16500646FFC /* SharedTypes.h */,
 			);
 			path = "vhs-test";
 			sourceTree = "<group>";
@@ -169,6 +171,7 @@
 				TargetAttributes = {
 					36F43D9829D946A100782344 = {
 						CreatedOnToolsVersion = 14.2;
+						LastSwiftMigration = 1420;
 					};
 				};
 			};
@@ -359,6 +362,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7R3NLYQFUA;
@@ -378,6 +382,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.vlad-zhavoronkov.vhs-test";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "vhs-test/vhs-test-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -388,6 +394,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7R3NLYQFUA;
@@ -407,6 +414,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.vlad-zhavoronkov.vhs-test";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "vhs-test/vhs-test-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

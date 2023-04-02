@@ -29,4 +29,10 @@ float rand(vec<T, 2> xy)
     return fract(sin(dot(xy, frequency)) * amplitude);
 }
 
+template<typename V, typename T>
+V discreted(V value, T factor)
+{
+    return round(value * factor) / factor;
+}
+
 #endif // Common_metal

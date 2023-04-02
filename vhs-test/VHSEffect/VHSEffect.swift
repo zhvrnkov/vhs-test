@@ -21,6 +21,12 @@ final class VHSEffect {
     private let context: MTLContext
     
     private let pipelineState: MTLComputePipelineState
+    private var parameters: VHSParameters = DefaultVHSParameters() {
+        didSet {
+            blurKernel = makeBlurKernel()
+        }
+    }
+    private lazy var blurKernel = makeBlurKernel()
     
     init(context: MTLContext) throws {
         self.context = context
@@ -43,12 +49,22 @@ final class VHSEffect {
         
         var seconds = Float(time.seconds)
         encoder.set(value: &seconds, index: 0)
+        encoder.set(value: &parameters, index: 1)
         encoder.set(textures: [sourceTexture, vhsDestinationImage.texture])
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
 
         encoder.endEncoding()
 
-        let blur = MPSImageGaussianBlur(device: context.device, sigma: 1.25)
-        blur.encode(commandBuffer: commandBuffer, sourceTexture: vhsDestinationImage.texture, destinationTexture: destinationTexture)
+        blurKernel.encode(
+            commandBuffer: commandBuffer,
+            sourceTexture: vhsDestinationImage.texture,
+            destinationTexture: destinationTexture
+        )
+    }
+    
+    private func makeBlurKernel() -> MPSUnaryImageKernel {
+        let blur = MPSImageGaussianBlur(device: context.device, sigma: parameters.blurSigma)
+        blur.edgeMode = .clamp
+        return blur
     }
 }
