@@ -22,29 +22,55 @@ T quantitize(T rgb, float colorsPerChannel)
 }
 
 template<typename T>
-vec<T, 4> grain(vec<T, 4> input, T noise, T strength)
+vec<T, 4> grain(vec<T, 4> input, T noise, float strength)
 {
     return input + noise * strength;
 }
 
 template<typename V, typename T>
-V distort(V coord, T noise, T strength)
+V distort(V coord, T noise, float strength)
 {
     return coord + noise * strength;
 }
 
 half4 glitch(float2 uv, float time)
 {
-    uv = uv * 10.0;
-    float2 integer = floor(uv);
-    float2 fractional = fract(uv);
-    
-    float vertical = 0.02 * round(10.0 * (1.0 - fractional.y)) / 10.0;
-    float horizontal = step(fractional.x, 0.5-vertical) + step(0.5+vertical, fractional.x);
-    horizontal = 1.0 - horizontal;
+    constexpr float glitchFrequency = 0.005;
+    constexpr float2 glitchGrid = float2(10.0);
+    constexpr float artifactThickness = 0.02;
+    constexpr float artifactSmoothness = 10.0;
+    constexpr float artifactVerticalAxis = 0.5;
 
-    float noise = float(rand(integer + time) > 0.995);
+    uv = uv * glitchGrid;
+    const auto integer = floor(uv);
+    const auto fractional = fract(uv);
+    
+    const auto vertical = artifactThickness * round(artifactSmoothness * (1.0 - fractional.y)) / artifactSmoothness;
+    const auto horizontal = 1.0 - (step(fractional.x, artifactVerticalAxis-vertical) +
+                                   step(artifactVerticalAxis+vertical, fractional.x));
+
+    const float noise = float(rand(integer + time) > (1.0 - glitchFrequency));
     return half4(horizontal * noise);
+}
+
+half makeVerticalScanLine(float2 uv, float time, float frequency, float thickness)
+{
+    constexpr float scanLinePosition = 0.5;
+
+    const float base = scanLinePosition * frequency;
+    const float delta = thickness;
+    
+    const float cycledX = fmod(uv.x + time, frequency);
+    return smoothstep(base - delta, base, cycledX) - smoothstep(base, base + delta, cycledX);
+}
+
+half makeVerticalDistortion(float2 uv, float time)
+{
+    constexpr float numberOfHorizontalSegments = 25.0;
+    constexpr float verticalDistortionFrequency = 0.03;
+    
+    const float x = floor(uv.x * numberOfHorizontalSegments);
+    return rand(float2(x, 1.0) + time) > 1.0 - verticalDistortionFrequency;
 }
 
 half4x4 makeBrightnessMatrix(half brightness) {
@@ -64,22 +90,20 @@ half4x4 makeContrastMatrix(half contrast)
 half4x4 makeSaturationMatrix(half saturation)
 {
     constexpr half3 luminance = half3(0.3086, 0.6094, 0.0820);
-    
+
     float oneMinusSat = 1.0 - saturation;
     
-    half3 red = half3( luminance.x * oneMinusSat );
-    red += half3( saturation, 0, 0 );
-    
-    half3 green = half3( luminance.y * oneMinusSat );
-    green += half3( 0, saturation, 0 );
-    
-    half3 blue = half3( luminance.z * oneMinusSat );
-    blue += half3( 0, 0, saturation );
-    
-    return half4x4(half4(red, 0),
-                   half4(green, 0),
-                   half4(blue, 0),
-                   half4(0, 0, 0, 1));
+    half4x4 output = half4x4(1.0);
+    output[0].rgb = half3(luminance.x * oneMinusSat) + half3(saturation, 0, 0);
+    output[1].rgb = half3( luminance.y * oneMinusSat ) + half3(0, saturation, 0);
+    output[2].rgb = half3(luminance.z * oneMinusSat) + half3(0, 0, saturation);
+ 
+    return output;
+}
+
+half4x4 makeBCSMatrix(half brightness, half contrast, half saturation)
+{
+    return makeBrightnessMatrix(brightness) * makeContrastMatrix(contrast) * makeSaturationMatrix(saturation);
 }
 
 kernel void vhs(texture2d<half, access::sample> sourceTexture [[ texture(0) ]],
@@ -88,20 +112,40 @@ kernel void vhs(texture2d<half, access::sample> sourceTexture [[ texture(0) ]],
                 uint2 gridPosition [[ thread_position_in_grid ]])
 {
     constexpr sampler s;
+    constexpr float distortionStrength = 0.0015;
 
+    constexpr float vsSpeed = 0.25;
+    constexpr float vsFreq = 2.0;
+    constexpr float vsThickness = 0.01;
+    constexpr float vsStrength = 0.00125;
+    
+    constexpr float verticalGlitchStrength = 0.0015;
+
+    constexpr float colorsPerChannel = 32.0;
+    
+    constexpr float grainStrength = 0.1;
+    
+    constexpr float brightness = -0.15;
+    constexpr float contrast = 1.35;
+    constexpr float saturation = 0.65;
+    
     const float2 sourceSize = float2(sourceTexture.get_width(), sourceTexture.get_height());
     const float2 uv = float2(gridPosition) / sourceSize;
     const half noise = rand(uv + time);
-    const float2 distortedUV = distort(uv, noise, 0.0015h);
 
+    float2 distortedUV = distort(uv, noise, distortionStrength);
+    const float verticalScanline = makeVerticalScanLine(distortedUV, time * vsSpeed, vsFreq, vsThickness);
+    const float verticalDistortion = makeVerticalDistortion(uv, time);
+    distortedUV.y += verticalScanline * vsStrength;
+    distortedUV.y += verticalDistortion * verticalGlitchStrength;
+    
+    const half4 sourceTexel = sourceTexture.sample(s, distortedUV);
     const half4 artifacts = glitch(distortedUV, time);
-    const half4 pixelated = mix(sourceTexture.sample(s, distortedUV), artifacts, artifacts.a);
-    const half4 bitDepthReduced = quantitize(pixelated, 32.0);
-    const half4 grained = grain(bitDepthReduced, noise, 0.1h);
+    const half4 withArtifacts = mix(sourceTexel, artifacts, artifacts.a);
+    const half4 bitDepthReduced = quantitize(withArtifacts, colorsPerChannel);
+    const half4 grained = grain(bitDepthReduced, noise, grainStrength);
     
-    const auto brightnessMatrix = makeBrightnessMatrix(-0.15);
-    const auto contrastMatrix = makeContrastMatrix(1.35);
-    const auto saturationMatrix = makeSaturationMatrix(0.65);
+    const auto bcsMatrix = makeBCSMatrix(brightness, contrast, saturation);
     
-    destinationTexture.write(brightnessMatrix * contrastMatrix * saturationMatrix * grained, gridPosition);
+    destinationTexture.write(bcsMatrix * grained, gridPosition);
 }

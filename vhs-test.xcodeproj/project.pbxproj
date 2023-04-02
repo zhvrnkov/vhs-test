@@ -43,6 +43,7 @@
 		3612D50B29D9590C00646FFC /* VCR_OSD_MONO_1.001.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = VCR_OSD_MONO_1.001.ttf; sourceTree = "<group>"; };
 		3612D50E29D966E500646FFC /* VHSEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VHSEffect.swift; sourceTree = "<group>"; };
 		3612D51029D96CB900646FFC /* VHS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = VHS.metal; sourceTree = "<group>"; };
+		3612D51229D9F09900646FFC /* SharedTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedTypes.h; sourceTree = "<group>"; };
 		36F43D9929D946A100782344 /* vhs-test.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "vhs-test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		36F43D9C29D946A100782344 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		36F43DA529D946A200782344 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -131,6 +132,7 @@
 				3612D4F029D9474C00646FFC /* original.MOV */,
 				3612D4F529D947E600646FFC /* VideoCompositor.swift */,
 				3612D50B29D9590C00646FFC /* VCR_OSD_MONO_1.001.ttf */,
+				3612D51229D9F09900646FFC /* SharedTypes.h */,
 			);
 			path = "vhs-test";
 			sourceTree = "<group>";
