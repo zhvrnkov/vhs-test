@@ -53,8 +53,8 @@ typedef struct {
 
 ColorCorrectionParameters DefaultColorCorrectionParameters() {
     ColorCorrectionParameters output;
-    output.brightness = -0.15;
-    output.contrast = 1.35;
+    output.brightness = -0.1;
+    output.contrast = 1.25;
     output.saturation = 0.65;
     return output;
 }
